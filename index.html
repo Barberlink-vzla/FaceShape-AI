@@ -66,15 +66,18 @@
         </div>
 
         <div id="scanScreen" class="hidden flex-col items-center justify-between h-full">
-            <h2 class="text-2xl font-bold text-center mt-2">Centra tu rostro</h2>
+            <h2 class="text-2xl font-bold text-center mt-2">Analizando en tiempo real</h2>
             <div id="scanContainer" class="w-full aspect-square rounded-3xl overflow-hidden bg-gray-800 relative">
                 <div class="absolute inset-0 border-4 border-dashed border-gray-500 rounded-3xl flex items-center justify-center">
                     <p class="text-gray-500">Activando cámara...</p>
                 </div>
-                <div class="scan-line absolute w-full h-1 bg-cyan-400/50 shadow-[0_0_15px_rgba(72,187,255,0.9)]" style="top: 0;"></div>
+                 <div class="scan-line absolute w-full h-1 bg-cyan-400/50 shadow-[0_0_15px_rgba(72,187,255,0.9)]" style="top: 0; display: none;"></div>
             </div>
-            <p id="scanMessage" class="text-center text-gray-400 h-10 mt-4">Analizando...</p>
-            <button id="cancelButton" class="w-full bg-gray-700 text-white font-semibold py-3 rounded-xl mt-4 transition-colors hover:bg-gray-600">
+             <p id="scanMessage" class="text-center text-gray-400 h-10 mt-4">Acerca tu rostro a la cámara...</p>
+            <button id="confirmButton" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl mt-2 transition-all hover:bg-indigo-500 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>
+                Confirmar Forma y Ver Cortes
+            </button>
+            <button id="cancelButton" class="w-full bg-gray-700 text-white font-semibold py-3 rounded-xl mt-2 transition-colors hover:bg-gray-600">
                 Cancelar
             </button>
         </div>
@@ -90,13 +93,12 @@
             
             <h3 class="font-semibold text-lg mb-3">Cortes recomendados:</h3>
             <div id="recommendations" class="w-full overflow-y-auto flex-grow space-y-4 pr-2">
-                </div>
+            </div>
             
             <button id="rescanButton" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl mt-4 transition-colors hover:bg-indigo-500">
                 Escanear de Nuevo
             </button>
         </div>
-
     </div>
 
     <script>
@@ -108,6 +110,7 @@
         const startButton = document.getElementById('startButton');
         const cancelButton = document.getElementById('cancelButton');
         const rescanButton = document.getElementById('rescanButton');
+        const confirmButton = document.getElementById('confirmButton'); // <-- NUEVO
 
         const loader = document.getElementById('loader');
         const startError = document.getElementById('startError');
@@ -115,11 +118,12 @@
         const scanMessage = document.getElementById('scanMessage');
         const faceShapeResult = document.getElementById('faceShapeResult');
         const recommendations = document.getElementById('recommendations');
-        const ageResult = document.getElementById('ageResult'); // <-- Nuevo elemento del DOM
+        const ageResult = document.getElementById('ageResult');
         
         let video = null;
         let canvas = null;
         let detectionInterval = null;
+        let lastDetections = null; // <-- NUEVO: Para guardar la última detección
 
         const haircutSuggestions = {
             Ovalado: [ { name: 'Corte Clásico', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Clasico' }, { name: 'Tupé Texturizado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Tupe' }, { name: 'Media Melena', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Melena' } ],
@@ -134,13 +138,12 @@
 
         // 1. Load FaceAPI Models
         async function loadModels() {
-            const MODEL_URL = 'weights';
+            const MODEL_URL = 'weights'; 
             try {
                 loader.classList.remove('hidden');
                 loader.classList.add('flex', 'flex-col', 'items-center');
                 startButton.classList.add('hidden');
                 
-                // === CAMBIO: Cargar el modelo de edad y género ===
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -160,6 +163,8 @@
 
         // 2. Start Video Stream
         async function startVideo() {
+            lastDetections = null; // Reiniciar detecciones
+            confirmButton.disabled = true; // Deshabilitar botón
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } 
@@ -191,7 +196,7 @@
             }
         }
         
-        // 3. Start Face Detection Loop
+        // 3. Start Face Detection Loop (MODIFICADO)
         function startDetection() {
             detectionInterval = setInterval(async () => {
                 if (!video || video.paused) return;
@@ -201,7 +206,6 @@
                     faceapi.matchDimensions(canvas, displaySize);
                 }
 
-                // === CAMBIO: Añadir withAgeAndGender() a la detección ===
                 const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                     .withFaceLandmarks()
                     .withAgeAndGender();
@@ -212,30 +216,60 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 if (resizedDetections) {
-                    scanMessage.textContent = "¡Te encontramos! Analizando...";
-                    stopDetection();
-                    // === CAMBIO: Pasar el objeto de detección completo ===
-                    processResult(resizedDetections);
+                    lastDetections = resizedDetections; // Guardar la última detección
+                    confirmButton.disabled = false; // Habilitar botón de confirmar
+                    scanMessage.textContent = "¡Rostro detectado!";
+                    drawDetections(resizedDetections); // Dibujar en el canvas
                 } else {
+                    lastDetections = null;
+                    confirmButton.disabled = true; // Deshabilitar si no hay rostro
                     scanMessage.textContent = "Acerca tu rostro a la cámara...";
                 }
-            }, 300);
+            }, 200); // Intervalo más corto para una sensación más fluida
+        }
+
+        // 4. NUEVA FUNCIÓN: Dibujar las detecciones en el canvas
+        function drawDetections(detections) {
+            const ctx = canvas.getContext('2d');
+            const shape = getFaceShape(detections.landmarks);
+
+            // Dibujar contorno del rostro (mandíbula)
+            const jawOutline = detections.landmarks.getJawOutline();
+            ctx.strokeStyle = '#06b6d4'; // Color cian
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(jawOutline[0].x, jawOutline[0].y);
+            jawOutline.forEach(point => {
+                ctx.lineTo(point.x, point.y);
+            });
+            ctx.stroke();
+            
+            // Opcional: Dibujar todos los puntos de referencia
+            // faceapi.draw.drawFaceLandmarks(canvas, detections);
+
+            // Mostrar el texto de la forma del rostro
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 24px Inter';
+            ctx.textAlign = 'center';
+            // Posicionar el texto sobre la frente
+            const foreheadY = detections.landmarks.getLeftEyeBrow()[0].y - 20;
+            ctx.fillText(shape, canvas.width / 2, foreheadY > 20 ? foreheadY : 40);
         }
         
-        // 4. Stop Detection and Camera
+        // 5. Stop Detection and Camera
         function stopDetection() {
             clearInterval(detectionInterval);
             detectionInterval = null;
             if (video && video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
             }
-            if (video) video.remove();
-            if (canvas) canvas.remove();
+            if(video) video.remove();
+            if(canvas) canvas.remove();
             video = null;
             canvas = null;
         }
 
-        // 5. Determine Face Shape from Landmarks
+        // 6. Determine Face Shape from Landmarks (Sin cambios)
         function getFaceShape(landmarks) {
             const jawline = landmarks.getJawOutline();
             const faceWidth = jawline[16].x - jawline[0].x;
@@ -259,7 +293,7 @@
             return "Ovalado";
         }
         
-        // === NUEVA FUNCIÓN: Para clasificar la edad en categorías ===
+        // 7. Get Age Category (Sin cambios)
         function getAgeCategory(age) {
             if (age <= 12) return "Niño/a";
             if (age > 12 && age <= 17) return "Adolescente";
@@ -269,9 +303,10 @@
             return "Indeterminado";
         }
 
-        // 6. Process and Display Results
-        // === CAMBIO: La función ahora procesa forma y edad ===
+        // 8. Process and Display Results (MODIFICADO)
         function processResult(detections) {
+            if (!detections) return; // Salir si no hay detección guardada
+
             const shape = getFaceShape(detections.landmarks);
             const age = Math.round(detections.age);
             const category = getAgeCategory(age);
@@ -319,13 +354,23 @@
                 showScreen('start');
             }
         });
+
         cancelButton.addEventListener('click', () => {
             stopDetection();
             showScreen('start');
         });
+
         rescanButton.addEventListener('click', () => {
             showScreen('scan');
             startVideo();
+        });
+
+        // NUEVO: Event Listener para el botón de confirmar
+        confirmButton.addEventListener('click', () => {
+            if (lastDetections) {
+                stopDetection();
+                processResult(lastDetections);
+            }
         });
     </script>
 </body>
