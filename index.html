@@ -3,67 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asesor de Cortes de Cabello</title>
+    <title>Asesor de Cortes de Cabello IA</title>
     
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <!-- face-api.js -->
-    <!-- Asegúrate de que la ruta sea correcta según la estructura de tu proyecto -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <style>
-        /* Custom styles and animations */
         body {
             font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent; /* Removes blue highlight on tap */
+            -webkit-tap-highlight-color: transparent;
         }
-
-        /* Hide scrollbars */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-        
-        /* Fade-in animation */
+        ::-webkit-scrollbar { display: none; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-        
-        /* Pulse animation for the start button */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes pulse {
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
             50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
         }
-        .animate-pulse-custom {
-            animation: pulse 2s infinite;
-        }
-
-        /* Scanning animation */
+        .animate-pulse-custom { animation: pulse 2s infinite; }
         @keyframes scan {
             0% { top: 0%; }
             100% { top: 100%; }
         }
-        .scan-line {
-            animation: scan 3s linear infinite;
-        }
-        
-        /* Ensure video and canvas are centered and stacked */
+        .scan-line { animation: scan 3s linear infinite; }
         #scanContainer {
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-        
         video, canvas {
             position: absolute;
             top: 0;
@@ -76,10 +52,9 @@
 
     <div class="w-full max-w-sm h-[85vh] max-h-[700px] bg-black rounded-3xl shadow-2xl shadow-indigo-500/20 p-4 flex flex-col text-white overflow-hidden">
 
-        <!-- ===== Pantalla de Inicio ===== -->
         <div id="startScreen" class="flex flex-col items-center justify-center text-center h-full fade-in">
             <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 mb-4">FaceShape AI</h1>
-            <p class="text-gray-300 mb-8">Descubre el corte de cabello perfecto para la forma de tu rostro.</p>
+            <p class="text-gray-300 mb-8">Descubre el corte de cabello perfecto para ti.</p>
             <div id="loader" class="mb-4 hidden">
                 <div class="w-8 h-8 border-4 border-t-transparent border-white rounded-full animate-spin"></div>
                 <p class="text-gray-400 mt-2 text-sm">Cargando modelos de IA...</p>
@@ -90,15 +65,12 @@
             <p id="startError" class="text-red-400 text-sm mt-4 hidden"></p>
         </div>
 
-        <!-- ===== Pantalla de Escaneo ===== -->
         <div id="scanScreen" class="hidden flex-col items-center justify-between h-full">
             <h2 class="text-2xl font-bold text-center mt-2">Centra tu rostro</h2>
             <div id="scanContainer" class="w-full aspect-square rounded-3xl overflow-hidden bg-gray-800 relative">
-                <!-- El video de la cámara se insertará aquí -->
                 <div class="absolute inset-0 border-4 border-dashed border-gray-500 rounded-3xl flex items-center justify-center">
                     <p class="text-gray-500">Activando cámara...</p>
                 </div>
-                 <!-- Animación de la línea de escaneo -->
                 <div class="scan-line absolute w-full h-1 bg-cyan-400/50 shadow-[0_0_15px_rgba(72,187,255,0.9)]" style="top: 0;"></div>
             </div>
             <p id="scanMessage" class="text-center text-gray-400 h-10 mt-4">Analizando...</p>
@@ -107,16 +79,18 @@
             </button>
         </div>
 
-        <!-- ===== Pantalla de Resultados ===== -->
         <div id="resultScreen" class="hidden flex-col items-center h-full text-center">
             <h2 class="text-xl font-bold mb-2">Análisis Completo</h2>
-            <p class="text-gray-400 mb-4">Según nuestro análisis, tu rostro es:</p>
-            <p id="faceShapeResult" class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 mb-6"></p>
+            
+            <p class="text-gray-400">Tu rostro es:</p>
+            <p id="faceShapeResult" class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 mb-4"></p>
+            
+            <p class="text-gray-400">Edad estimada:</p>
+            <p id="ageResult" class="text-2xl font-bold text-white mb-6"></p>
             
             <h3 class="font-semibold text-lg mb-3">Cortes recomendados:</h3>
             <div id="recommendations" class="w-full overflow-y-auto flex-grow space-y-4 pr-2">
-                <!-- Las recomendaciones se insertarán aquí -->
-            </div>
+                </div>
             
             <button id="rescanButton" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl mt-4 transition-colors hover:bg-indigo-500">
                 Escanear de Nuevo
@@ -141,98 +115,70 @@
         const scanMessage = document.getElementById('scanMessage');
         const faceShapeResult = document.getElementById('faceShapeResult');
         const recommendations = document.getElementById('recommendations');
+        const ageResult = document.getElementById('ageResult'); // <-- Nuevo elemento del DOM
         
         let video = null;
         let canvas = null;
         let detectionInterval = null;
 
-        // Haircut recommendations based on face shape
         const haircutSuggestions = {
-            Ovalado: [
-                { name: 'Corte Clásico', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Clasico' },
-                { name: 'Tupé Texturizado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Tupe' },
-                { name: 'Media Melena', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Melena' }
-            ],
-            Redondo: [
-                { name: 'Pompadour', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Pompadour' },
-                { name: 'Flequillo Lateral', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Flequillo' },
-                { name: 'Undercut', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Undercut' }
-            ],
-            Cuadrado: [
-                { name: 'Buzz Cut (Rapado)', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Buzz+Cut' },
-                { name: 'Corte Desordenado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Desordenado' },
-                { name: 'Slick Back', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Slick+Back' }
-            ],
-            Corazón: [
-                { name: 'Flequillo Largo', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Flequillo+Largo' },
-                { name: 'Corte a capas', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Capas' },
-                { name: 'Bob Texturizado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Bob' }
-            ],
-            Alargado: [
-                { name: 'Corte con flequillo', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Con+Flequillo' },
-                { name: 'Corte lateral', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Lateral' },
-                { name: 'Evitar volumen arriba', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Poco+Volumen' }
-            ],
-            Desconocido: [
-                 { name: 'No se pudo determinar', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Error' }
-            ]
+            Ovalado: [ { name: 'Corte Clásico', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Clasico' }, { name: 'Tupé Texturizado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Tupe' }, { name: 'Media Melena', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Melena' } ],
+            Redondo: [ { name: 'Pompadour', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Pompadour' }, { name: 'Flequillo Lateral', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Flequillo' }, { name: 'Undercut', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Undercut' } ],
+            Cuadrado: [ { name: 'Buzz Cut (Rapado)', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Buzz+Cut' }, { name: 'Corte Desordenado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Desordenado' }, { name: 'Slick Back', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Slick+Back' } ],
+            Corazón: [ { name: 'Flequillo Largo', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Flequillo+Largo' }, { name: 'Corte a capas', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Capas' }, { name: 'Bob Texturizado', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Bob' } ],
+            Alargado: [ { name: 'Corte con flequillo', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Con+Flequillo' }, { name: 'Corte lateral', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Lateral' }, { name: 'Evitar volumen arriba', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Poco+Volumen' } ],
+            Desconocido: [ { name: 'No se pudo determinar', img: 'https://placehold.co/100x100/334155/e2e8f0?text=Error' } ]
         };
         
         // --- Core Logic ---
 
         // 1. Load FaceAPI Models
         async function loadModels() {
-            // Make sure the path is correct
             const MODEL_URL = 'weights';
-// Nota: En el CDN, los modelos suelen estar en una carpeta llamada 'weights'.
             try {
                 loader.classList.remove('hidden');
                 loader.classList.add('flex', 'flex-col', 'items-center');
                 startButton.classList.add('hidden');
                 
+                // === CAMBIO: Cargar el modelo de edad y género ===
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
                 ]);
                 
                 loader.classList.add('hidden');
                 startButton.classList.remove('hidden');
             } catch (error) {
                 console.error("Error loading models:", error);
-                startError.textContent = 'Error al cargar la IA. Revisa la ruta de los modelos.';
+                startError.textContent = 'Error al cargar la IA. Revisa la consola.';
                 startError.classList.remove('hidden');
                 loader.classList.add('hidden');
             }
         }
-        loadModels(); // Load models on page load
+        loadModels();
 
         // 2. Start Video Stream
         async function startVideo() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user', // Use front camera
-                        width: { ideal: 480 },
-                        height: { ideal: 640 }
-                    } 
+                    video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } 
                 });
                 
                 video = document.createElement('video');
                 video.autoplay = true;
                 video.muted = true;
                 video.srcObject = stream;
-                video.style.transform = "scaleX(-1)"; // Mirror the video
+                video.style.transform = "scaleX(-1)";
                 scanContainer.appendChild(video);
 
                 video.addEventListener('loadedmetadata', () => {
                     video.play();
-                    // Setup canvas for drawing
                     canvas = faceapi.createCanvasFromMedia(video);
-                    canvas.style.transform = "scaleX(-1)"; // Mirror the canvas
+                    canvas.style.transform = "scaleX(-1)";
                     scanContainer.appendChild(canvas);
                     const displaySize = { width: scanContainer.clientWidth, height: scanContainer.clientHeight };
                     faceapi.matchDimensions(canvas, displaySize);
-                    
                     startDetection();
                 });
                 return true;
@@ -255,23 +201,25 @@
                     faceapi.matchDimensions(canvas, displaySize);
                 }
 
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+                // === CAMBIO: Añadir withAgeAndGender() a la detección ===
+                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withAgeAndGender();
+                
                 const resizedDetections = detections ? faceapi.resizeResults(detections, displaySize) : null;
                 
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 if (resizedDetections) {
-                    scanMessage.textContent = "¡Te encontramos! Analizando forma...";
-                    // faceapi.draw.drawFaceLandmarks(canvas, resizedDetections); // Uncomment to see landmarks
-                    
-                    // Stop detection and process result
+                    scanMessage.textContent = "¡Te encontramos! Analizando...";
                     stopDetection();
-                    processResult(resizedDetections.landmarks);
+                    // === CAMBIO: Pasar el objeto de detección completo ===
+                    processResult(resizedDetections);
                 } else {
                     scanMessage.textContent = "Acerca tu rostro a la cámara...";
                 }
-            }, 300); // Detect every 300ms
+            }, 300);
         }
         
         // 4. Stop Detection and Camera
@@ -290,54 +238,49 @@
         // 5. Determine Face Shape from Landmarks
         function getFaceShape(landmarks) {
             const jawline = landmarks.getJawOutline();
-            
-            // Widths
             const faceWidth = jawline[16].x - jawline[0].x;
             const jawWidth = jawline[12].x - jawline[4].x;
             const foreheadPoints = [landmarks.getLeftEyeBrow()[4], landmarks.getRightEyeBrow()[0]];
             const foreheadWidth = foreheadPoints[1].x - foreheadPoints[0].x;
-
-            // Heights
             const faceHeight = jawline[8].y - (foreheadPoints[0].y + foreheadPoints[1].y) / 2;
-            
             const ratio = faceHeight / faceWidth;
 
-            console.log(`Height: ${faceHeight.toFixed(2)}, Width: ${faceWidth.toFixed(2)}, Ratio: ${ratio.toFixed(2)}`);
-            console.log(`Jaw width: ${jawWidth.toFixed(2)}, Forehead width: ${foreheadWidth.toFixed(2)}`);
-
-            // Logic to determine shape
-            if (ratio > 1.4) {
-                return "Alargado";
+            if (ratio > 1.4) return "Alargado";
+            if (ratio > 1.1) {
+                return (foreheadWidth > jawWidth * 1.1) ? "Corazón" : "Ovalado";
             }
-            if (ratio > 1.1) { // Oval or Heart
-                if(foreheadWidth > jawWidth * 1.1) {
-                    return "Corazón";
-                }
-                return "Ovalado";
-            }
-            if (ratio >= 0.95 && ratio <= 1.1) { // Round or Square
+            if (ratio >= 0.95 && ratio <= 1.1) {
                 const jawAnglePoint = jawline[4];
                 const chinPoint = jawline[8];
                 const jawTipPoint = jawline[12];
-                // Check if jaw is more angular (square) or curved (round)
-                const angle = Math.atan2(jawTipPoint.y - chinPoint.y, jawTipPoint.x - chinPoint.x) - 
-                              Math.atan2(jawAnglePoint.y - chinPoint.y, jawAnglePoint.x - chinPoint.x);
-                
-                if (Math.abs(angle) < 2.5) { // radians for a sharper angle
-                    return "Cuadrado";
-                }
-                return "Redondo";
+                const angle = Math.atan2(jawTipPoint.y - chinPoint.y, jawTipPoint.x - chinPoint.x) - Math.atan2(jawAnglePoint.y - chinPoint.y, jawAnglePoint.x - chinPoint.x);
+                return (Math.abs(angle) < 2.5) ? "Cuadrado" : "Redondo";
             }
-            return "Ovalado"; // Default
+            return "Ovalado";
+        }
+        
+        // === NUEVA FUNCIÓN: Para clasificar la edad en categorías ===
+        function getAgeCategory(age) {
+            if (age <= 12) return "Niño/a";
+            if (age > 12 && age <= 17) return "Adolescente";
+            if (age > 17 && age <= 35) return "Joven Adulto";
+            if (age > 35 && age <= 60) return "Adulto";
+            if (age > 60) return "Adulto Mayor";
+            return "Indeterminado";
         }
 
         // 6. Process and Display Results
-        function processResult(landmarks) {
-            const shape = getFaceShape(landmarks);
+        // === CAMBIO: La función ahora procesa forma y edad ===
+        function processResult(detections) {
+            const shape = getFaceShape(detections.landmarks);
+            const age = Math.round(detections.age);
+            const category = getAgeCategory(age);
+            
             faceShapeResult.textContent = shape;
+            ageResult.textContent = `${age} años (${category})`;
 
             const suggestions = haircutSuggestions[shape] || haircutSuggestions['Desconocido'];
-            recommendations.innerHTML = ''; // Clear previous results
+            recommendations.innerHTML = '';
             suggestions.forEach(style => {
                 const div = document.createElement('div');
                 div.className = 'flex items-center bg-gray-800 p-3 rounded-xl fade-in';
@@ -347,12 +290,10 @@
                 `;
                 recommendations.appendChild(div);
             });
-
             showScreen('result');
         }
 
         // --- UI Control ---
-
         function showScreen(screenName) {
             startScreen.classList.add('hidden');
             scanScreen.classList.add('hidden');
@@ -363,10 +304,10 @@
                 startError.classList.add('hidden');
             } else if (screenName === 'scan') {
                 scanScreen.classList.remove('hidden');
-                scanScreen.classList.add('flex'); // Because it's a flex container
+                scanScreen.classList.add('flex');
             } else if (screenName === 'result') {
                 resultScreen.classList.remove('hidden');
-                resultScreen.classList.add('flex'); // Flex container
+                resultScreen.classList.add('flex');
             }
         }
 
@@ -375,20 +316,17 @@
             showScreen('scan');
             const cameraStarted = await startVideo();
             if (!cameraStarted) {
-                showScreen('start'); // Go back if camera fails
+                showScreen('start');
             }
         });
-
         cancelButton.addEventListener('click', () => {
             stopDetection();
             showScreen('start');
         });
-
         rescanButton.addEventListener('click', () => {
             showScreen('scan');
             startVideo();
         });
-
     </script>
 </body>
 </html>
